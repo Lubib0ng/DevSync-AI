@@ -1,4 +1,5 @@
-<img width="1536" height="1024" alt="5803e11f-a912-4e1d-98c8-35ecd7e2e91f" src="https://github.com/user-attachments/assets/8e3feb9a-0e10-42f3-aa4a-b7f4e69dbf70" />
+<img width="436" height="403" alt="스크린샷 2026-04-28 181055" src="https://github.com/user-attachments/assets/3473d25d-ebae-49ab-95cd-38dfa6eaa3fd" />
+
 
 # 🤖 DevSync AI
 
