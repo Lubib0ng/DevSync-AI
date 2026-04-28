@@ -1,3 +1,5 @@
+<img width="1536" height="1024" alt="5803e11f-a912-4e1d-98c8-35ecd7e2e91f" src="https://github.com/user-attachments/assets/8e3feb9a-0e10-42f3-aa4a-b7f4e69dbf70" />
+
 # 🤖 DevSync AI
 
 > IT 기술 문서와 최신 개발 트렌드를 실시간으로 큐레이션하며, 실무에 바로 적용할 수 있는 코드 예제와 아키텍처 설계를 제공하는 AI 기반 웹 애플리케이션
