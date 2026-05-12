@@ -1,0 +1,9 @@
+fastapi==0.136.1
+uvicorn==0.46.0
+httpx==0.28.1
+beautifulsoup4==4.14.3
+anthropic==0.100.0
+groq==1.2.0
+google-genai
+python-dotenv==1.2.2
+pydantic==2.13.4
