@@ -3,10 +3,10 @@ name: Deploy DevSync AI
 on:
   push:
     branches:
-      - main          # main 브랜치에 push 될 때 자동 실행
+      - main
   pull_request:
     branches:
-      - main          # PR 생성 시 빌드 검증만 실행
+      - main
 
 jobs:
   # ── 1. 프론트엔드 빌드 검증 ──────────────────────────────
@@ -33,14 +33,7 @@ jobs:
         run: npm run build
         working-directory: devsync-ai
         env:
-          CI: false   # ESLint 경고를 에러로 처리하지 않음
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: devsync-ai/build
-          retention-days: 1
+          CI: false
 
   # ── 2. 백엔드 검증 ───────────────────────────────────────
   build-backend:
@@ -55,7 +48,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -66,27 +58,7 @@ jobs:
       - name: Syntax check
         run: python -m py_compile backend/main.py
 
-  # ── 3. Vercel 배포 (프론트) ──────────────────────────────
-  deploy-frontend:
-    name: Deploy to Vercel
-    runs-on: ubuntu-latest
-    needs: [build-frontend, build-backend]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: devsync-ai
-          vercel-args: '--prod'
-
-  # ── 4. Render 배포 (백엔드) ──────────────────────────────
+  # ── 3. Render 배포 (백엔드) ──────────────────────────────
   deploy-backend:
     name: Deploy to Render
     runs-on: ubuntu-latest
@@ -96,4 +68,9 @@ jobs:
     steps:
       - name: Trigger Render Deploy Hook
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          echo "Render response: $RESPONSE"
+          if [ "$RESPONSE" != "200" ] && [ "$RESPONSE" != "201" ]; then
+            echo "::warning::Render deploy hook returned $RESPONSE. Set RENDER_DEPLOY_HOOK_URL in GitHub Secrets."
+          fi
