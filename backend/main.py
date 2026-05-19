@@ -31,7 +31,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],  # 모든 출처 허용 (Vercel, 로컬 등)
     allow_methods=["*"],
     allow_headers=["*"],
 )
