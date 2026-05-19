@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Groq from 'groq-sdk';
 import './App.css';
 
 function App() {
@@ -94,19 +95,10 @@ function App() {
     checkClaude();
   }, []);
 
-  // Groq 상태 확인
+  // Groq API 키 상태 확인 (환경변수 기반)
   useEffect(() => {
-    const checkAll = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/ai/all-status');
-        if (!res.ok) return;
-        const data = await res.json();
-        setGroqStatus(data.groq ? 'ok' : 'error');
-      } catch {
-        setGroqStatus('error');
-      }
-    };
-    checkAll();
+    const key = process.env.REACT_APP_GROQ_API_KEY;
+    setGroqStatus(key ? 'ok' : 'error');
   }, []);
 
   const buildSystemPrompt = () => {
@@ -162,35 +154,43 @@ function App() {
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
     try {
-      let response;
+      if (chatMode === 'groq') {
+        // ── Groq SDK 직접 호출 (백엔드 불필요) ──
+        const apiKey = process.env.REACT_APP_GROQ_API_KEY;
+        if (!apiKey) throw new Error('GROQ API 키가 설정되지 않았습니다.');
 
-      if (chatMode === 'claude') {
-        // ── Claude API ──
-        response = await fetch('http://localhost:8000/claude/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: claudeModel,
-            system: buildSystemPrompt(),
-            messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
-            max_tokens: 2048,
-          })
+        const groqClient = new Groq({
+          apiKey,
+          dangerouslyAllowBrowser: true,
         });
-      } else if (chatMode === 'groq') {
-        // ── Groq API ──
-        response = await fetch('http://localhost:8000/groq/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: groqModel,
-            system: buildSystemPrompt(),
-            messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
-            max_tokens: 2048,
-          })
+
+        const stream = await groqClient.chat.completions.create({
+          model: groqModel,
+          messages: [
+            { role: 'system', content: buildSystemPrompt() },
+            ...nextMessages.map(m => ({ role: m.role, content: m.content })),
+          ],
+          max_tokens: 2048,
+          stream: true,
         });
+
+        let accumulated = '';
+        for await (const chunk of stream) {
+          const token = chunk.choices[0]?.delta?.content || '';
+          if (token) {
+            accumulated += token;
+            const snap = accumulated;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: 'assistant', content: snap };
+              return updated;
+            });
+          }
+        }
+
       } else {
-        // ── Ollama API ──
-        response = await fetch('/api/chat', {
+        // ── Ollama API (로컬 전용) ──
+        const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -202,39 +202,39 @@ function App() {
             stream: true
           })
         });
-      }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || response.statusText);
-      }
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || response.statusText);
+        }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let accumulated = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let accumulated = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter((l) => l.trim());
-        for (const line of lines) {
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.error) throw new Error(parsed.error);
-            const token = parsed.message?.content || '';
-            if (token) {
-              accumulated += token;
-              const snap = accumulated;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = { role: 'assistant', content: snap };
-                return updated;
-              });
-            }
-          } catch (parseErr) {
-            if (parseErr.message && !parseErr.message.includes('JSON')) {
-              throw parseErr;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n').filter((l) => l.trim());
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.error) throw new Error(parsed.error);
+              const token = parsed.message?.content || '';
+              if (token) {
+                accumulated += token;
+                const snap = accumulated;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: 'assistant', content: snap };
+                  return updated;
+                });
+              }
+            } catch (parseErr) {
+              if (parseErr.message && !parseErr.message.includes('JSON')) {
+                throw parseErr;
+              }
             }
           }
         }
