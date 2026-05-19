@@ -625,13 +625,19 @@ function App() {
             rows={1}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={ollamaStatus === 'online' ? '메시지를 입력하세요... (Enter 전송, Shift+Enter 줄바꿈)' : 'Ollama 서버가 오프라인입니다. ollama serve를 실행해주세요.'}
-            disabled={ollamaStatus !== 'online' || ollamaLoading}
+            placeholder={
+              chatMode === 'groq'
+                ? '메시지를 입력하세요... (Enter 전송, Shift+Enter 줄바꿈)'
+                : ollamaStatus === 'online'
+                  ? '메시지를 입력하세요... (Enter 전송, Shift+Enter 줄바꿈)'
+                  : 'Ollama 서버가 오프라인입니다. ollama serve를 실행해주세요.'
+            }
+            disabled={(chatMode === 'ollama' && ollamaStatus !== 'online') || ollamaLoading}
           />
           <button
             className="chat-send-btn"
             onClick={sendMessage}
-            disabled={ollamaLoading || ollamaStatus !== 'online' || !inputText.trim()}
+            disabled={ollamaLoading || (chatMode === 'ollama' && ollamaStatus !== 'online') || !inputText.trim()}
             aria-label="전송"
           >
             ↑
