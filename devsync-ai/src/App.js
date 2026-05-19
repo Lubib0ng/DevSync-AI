@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Groq from 'groq-sdk';
+import BACKEND_URL from './config';
 import './App.css';
 
 function App() {
@@ -84,7 +85,7 @@ function App() {
   useEffect(() => {
     const checkClaude = async () => {
       try {
-        const res = await fetch('http://localhost:8000/claude/status');
+        const res = await fetch(`${BACKEND_URL}/claude/status`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setClaudeStatus(data.configured ? 'ok' : 'error');
@@ -276,7 +277,7 @@ function App() {
     setScoutElapsed(null);
 
     try {
-      const res = await fetch(`http://localhost:8000/scout/crawl?source=${source}`);
+      const res = await fetch(`${BACKEND_URL}/scout/crawl?source=${source}`);
       if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
       const data = await res.json();
       setScoutArticles(data);
